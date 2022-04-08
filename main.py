@@ -10,7 +10,7 @@ bannedFileNames = []
 # Argument parsing
 parser = argparse.ArgumentParser()
 parser.add_argument("directory", help="Which folder is searched")
-parser.add_argument("-s", "--search", nargs="+", help="Search")
+parser.add_argument("-s", "--search", nargs="+", default=[], help="Search")
 parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
 parser.add_argument("-e", "--extract", action="store_true", help="Extract zip, tar packages")
 parser.add_argument("-b", "--before", type=int, default=0, help="Show additional lines before a match")
@@ -112,6 +112,7 @@ def handleFile(filepath):
             elif args.before > 0:
                 beforeSize += 1
                 lineBefore[lineNumber % args.before] = line
+    return foundMatch
 
 
 def printLine(line, sidx=None, eidx=None):
@@ -179,15 +180,22 @@ def walk(walkpath):
             path = os.path.join(subdir, f)
             if handleFileType(subdir, path, f):
                 filesToParse.append(path)
-            skippedFiles.append(path)
+            else:
+                skippedFiles.append(path)
 
 def parse():
     # Run search on all valid files
+    nothingFound = []
+    for filepath in filesToParse:
+        if not handleFile(filepath):
+            nothingFound.append(filepath)
     if args.skipped:
+        print(colorLine("Skipped:", YELLOW))
         for filepath in skippedFiles:
             print(colorLine(filepath, RED))
-    for filepath in filesToParse:
-        handleFile(filepath)
+        print(colorLine("Found nothing:", YELLOW))
+        for filepath in nothingFound:
+            print(colorLine(filepath, RED))
 
 #retval = lineColor("123456789012345678901234567890", [(0, 10, (255,0,0), False), (8, 20, (0, 255, 0), False), (5, 25, (0,0,255), False)])
 #print(retval)
