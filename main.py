@@ -32,6 +32,9 @@ LIGHT_BLUE  = ( 50, 150, 255)
 YELLOW      = (255, 255,   0)
 DARK_YELLOW = (139, 128,   0)
 
+matches = 0
+foundInFiles = 0
+
 def handleFileType(subdir, filepath, filename):
     
     # Handle banned files
@@ -69,6 +72,7 @@ def handleFileType(subdir, filepath, filename):
     return True
 
 def handleFile(filepath):
+    global matches, foundInFiles
     file = open(filepath, "r")
 
     foundMatch = False
@@ -85,8 +89,10 @@ def handleFile(filepath):
         for w in searchWords:
             idx = line.find(w)
             if idx != -1:
+                matches += 1
                 # Print the file path when some match is found
                 if not foundMatch:
+                    foundInFiles += 1
                     foundMatch = True
                     print(colorLine(filepath, YELLOW))
                 else:
@@ -197,8 +203,12 @@ def parse():
         for filepath in nothingFound:
             print(colorLine(filepath, RED))
 
+def printStats():
+    print(colorLine("Found " + str(matches) + " matches inside different " + str(foundInFiles) + " files", GREEN))
+
 #retval = lineColor("123456789012345678901234567890", [(0, 10, (255,0,0), False), (8, 20, (0, 255, 0), False), (5, 25, (0,0,255), False)])
 #print(retval)
 
 walk(args.directory)
 parse()
+printStats()
