@@ -162,7 +162,11 @@ def printLine(line, sidx=None, eidx=None):
     for m in matches:
         colors.append((m.start(), m.end(), VAL_RED, False))
 
-    # 
+    # Numeric constants
+    # GUIDS/MAC addresses
+    # words ending with Exception
+    # Urls
+    # Namespaces
 
     # Printout
     print(lineColor(line, colors), end="")
