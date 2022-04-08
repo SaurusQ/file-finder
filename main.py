@@ -15,7 +15,7 @@ bannedFileNames = []
 
 # Argument parsing
 parser = argparse.ArgumentParser()
-#parser.add_argument("directory", help="Which folder is searched")
+parser.add_argument("directory", help="Which folder is searched")
 parser.add_argument("-s", "--search", help="Search")
 parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
 parser.add_argument("-e", "--extract", action="store_true", help="Extract zip, tar packages")
@@ -92,8 +92,11 @@ def handleFile(filepath):
                 if not foundMatch:
                     foundMatch = True
                     print(colorLine(filepath, YELLOW))
+                else:
+                    if beforeSize > args.before:
+                        print(colorLine("------", LIGHT_BLUE))
                 # Print lines before a match
-                for i in reversed(range(beforeSize)):
+                for i in reversed(range(min(beforeSize, args.before))):
                     printLineNumber(lineNumber - i - 1)
                     printLine(lineBefore[(lineNumber - i - 1) % args.before])
                 beforeSize = 0
@@ -109,8 +112,8 @@ def handleFile(filepath):
                 printLine(line)
                 continue
             # Save lines to print before a match
-            elif args.before > beforeSize:
-                beforeSize = min(beforeSize + 1, args.before)
+            elif args.before > 0:
+                beforeSize += 1
                 lineBefore[lineNumber % args.before] = line
 
 
@@ -124,10 +127,8 @@ def printLineNumber(lineNumber):
     if args.line:
         print(getColor(LIGHT_BLUE) + "{0: >5}:".format(lineNumber) + getDefaultColor(), end="")
 
-def colorLine(line, color, bg=False, sidx=0, eidx=None):
-    if eidx == None:
-        eidx = len(line)
-    return line[:sidx] + getColor(color, bg) + line[sidx:eidx] + getDefaultColor(bg) + line[eidx:]
+def colorLine(line, color, bg=False):
+    return getColor(color, bg) + line + getDefaultColor(bg)
 
 def lineColor(line, colorInfo):
     result= ""
@@ -191,8 +192,8 @@ def parse():
     for filepath in filesToParse:
         handleFile(filepath)
 
-retval = lineColor("123456789012345678901234567890", [(0, 10, (255,0,0), False), (8, 20, (0, 255, 0), False), (5, 25, (0,0,255), False)])
-print(retval)
+#retval = lineColor("123456789012345678901234567890", [(0, 10, (255,0,0), False), (8, 20, (0, 255, 0), False), (5, 25, (0,0,255), False)])
+#print(retval)
 
-#walk(args.directory)
-#parse()
+walk(args.directory)
+parse()
