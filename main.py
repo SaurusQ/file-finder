@@ -1,7 +1,9 @@
 import argparse
+from msilib.schema import _Validation_records
 import os
 import tarfile
 import zipfile
+import re
 
 # Configuration
 bannedFileTypes = ["bin", "exe"]
@@ -24,13 +26,19 @@ searchWords = ["test"]
 for w in args.search:
     searchWords.append(w)
 
-
-RED         = (255,   0,   0)
-GREEN       = (  0, 255,   0)
-BLUE        = (  0,   0, 255)
-LIGHT_BLUE  = ( 50, 150, 255)
-YELLOW      = (255, 255,   0)
-DARK_YELLOW = (139, 128,   0)
+BLACK           = (  0,   0,   0)
+GREY            = ( 10,  10,  10)
+RED             = (255,   0,   0)
+DARK_RED        = (140,   0,   0)
+VAL_RED         = (189, 113, 124)
+GREEN           = (  0, 255,   0)
+LIME_GREEN      = ( 50, 205,  50)
+FOREST_GREEN    = ( 34, 139,  34)
+BLUE            = (  0,   0, 255)
+LIGHT_BLUE      = ( 50, 150, 255)
+ELEC_BLUE       = (125, 249, 255)
+YELLOW          = (255, 255,   0)
+DARK_YELLOW     = (139, 128,   0)
 
 matches = 0
 foundInFiles = 0
@@ -122,10 +130,44 @@ def handleFile(filepath):
 
 
 def printLine(line, sidx=None, eidx=None):
-    if sidx == None:
-        print(line, end="")
-    else:
-        print(lineColor(line, [(sidx, eidx, RED, False)]), end="")
+    # Basic printout
+    #if sidx == None:
+    #    print(line, end="")
+    #else:
+    #   print(lineColor(line, [(sidx, eidx, RED, False)]), end="")
+
+    colors = []
+    # Match highlight
+    if sidx != None and eidx != None:
+        colors.append((sidx, eidx, DARK_RED, True))
+        #colors.append((sidx, eidx, BLACK, False))
+
+    # Time stamps
+    matches = re.finditer("(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}(?:\.\d*)?)((-(\d{2}):(\d{2})|Z)?)", line)
+    for m in matches:
+        colors.append((m.start(), m.end(), FOREST_GREEN, False))
+
+    # Log level
+    matches = re.finditer("(DEBUG)|(INFO)|(INFORMATION)|(WARN)|(WARNING)|(ERROR)|(FAIL)|(FAILURE)", line)
+    for m in matches:
+        colors.append((m.start(), m.end(), VAL_RED, False))
+    
+    # Std constants
+    matches = re.finditer("(null)|(true)|(false)", line)
+    for m in matches:
+        colors.append((m.start(), m.end(), ELEC_BLUE, False))
+
+    # String constants
+    matches = re.finditer("\"[^\"]*\"", line)
+    for m in matches:
+        colors.append((m.start(), m.end(), VAL_RED, False))
+
+    # 
+
+    # Printout
+    print(lineColor(line, colors), end="")
+    
+
 
 def printLineNumber(lineNumber):
     if args.line:
@@ -204,7 +246,7 @@ def parse():
             print(colorLine(filepath, RED))
 
 def printStats():
-    print(colorLine("Found " + str(matches) + " matches inside different " + str(foundInFiles) + " files", GREEN))
+    print(colorLine("Found " + str(matches) + " matches inside " + str(foundInFiles) + " different files", GREEN))
 
 #retval = lineColor("123456789012345678901234567890", [(0, 10, (255,0,0), False), (8, 20, (0, 255, 0), False), (5, 25, (0,0,255), False)])
 #print(retval)
