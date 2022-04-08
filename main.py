@@ -16,7 +16,7 @@ bannedFileNames = []
 # Argument parsing
 parser = argparse.ArgumentParser()
 parser.add_argument("directory", help="Which folder is searched")
-parser.add_argument("-s", "--search", help="Search")
+parser.add_argument("-s", "--search", nargs="+", help="Search")
 parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
 parser.add_argument("-e", "--extract", action="store_true", help="Extract zip, tar packages")
 parser.add_argument("-b", "--before", type=int, default=0, help="Show additional lines before a match")
@@ -27,6 +27,9 @@ parser.add_argument("--skipped", action="store_true", help="Show skipped files")
 args = parser.parse_args()
 
 searchWords = ["test"]
+for w in args.search:
+    searchWords.append(w)
+
 
 RED         = (255,   0,   0)
 GREEN       = (  0, 255,   0)
