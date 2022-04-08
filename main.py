@@ -1,13 +1,7 @@
 import argparse
-from email.base64mime import body_encode
-from genericpath import isfile
 import os
-from queue import Queue
 import tarfile
-from unittest import result
 import zipfile
-
-from cv2 import BFMatcher
 
 # Configuration
 bannedFileTypes = ["bin", "exe"]
