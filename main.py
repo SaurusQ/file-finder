@@ -3,7 +3,6 @@ import os
 import tarfile
 import zipfile
 import re
-import shutil
 import sys
 
 # Configuration
