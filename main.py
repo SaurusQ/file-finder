@@ -345,9 +345,6 @@ def interactive():
         listener.join()
     listener.stop()
 
-    
-
-
 #retval = lineColor("123456789012345678901234567890", [(0, 10, (255,0,0), False), (11,20, (0,255,0), False)])#, (8, 20, (0, 255, 0), False), (5, 25, (0,0,255), False)])
 #print(retval)
 
@@ -355,9 +352,7 @@ walk(args.directory)
 parse()
 printStats()
 
-import sys
 sys.stdout.flush()
 
 if args.interactive:
-    print("Interactive")
     interactive()
