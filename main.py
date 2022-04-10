@@ -98,10 +98,12 @@ def handleFile(filepath):
         # Force line break to the last line
         if line[-1] != "\n":
             line += "\n"
+        lineMatch = False
         for w in searchWords:
             idx = line.find(w)
             if idx != -1:
                 matches += 1
+                lineMatch = True
                 # Print the file path when some match is found
                 if not foundMatch:
                     foundInFiles += 1
@@ -120,8 +122,9 @@ def handleFile(filepath):
                 printLine(line, idx, idx + len(w))
                 pafter = args.after
                 break
-            # Printing after a match
-            elif pafter:
+        # Printing after a match
+        if not lineMatch:
+            if pafter:
                 pafter -= 1
                 printLineNumber(lineNumber)
                 printLine(line)
@@ -171,7 +174,7 @@ def printLine(line, sidx=None, eidx=None):
     addColors(matches, VAL_RED)
     
     # Std constants
-    matches = re.finditer("(null)|(true)|(false)", line)
+    matches = re.finditer("(null)|(true)|(false)|(class)|(def)", line)
     addColors(matches, ELEC_BLUE)
 
     # String constants
