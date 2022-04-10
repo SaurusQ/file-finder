@@ -32,9 +32,14 @@ GREY            = ( 10,  10,  10)
 RED             = (255,   0,   0)
 DARK_RED        = (140,   0,   0)
 VAL_RED         = (240, 113, 124)
+FIRE_BRICK      = (178,  34,  34)
+TOMATO          = (255,  99,  71)
+DARK_ORANGE     = (255, 140,   0)
 GREEN           = (  0, 255,   0)
 LIME_GREEN      = ( 50, 205,  50)
 FOREST_GREEN    = ( 63, 220, 107)
+LIGHT_SEA_GREEN = ( 32, 178, 170)
+AQUA_MARINE     = (127, 255, 212)
 BLUE            = (  0,   0, 255)
 LIGHT_BLUE      = ( 16, 177, 254)
 ELEC_BLUE       = (125, 249, 255)
@@ -171,7 +176,7 @@ def printLine(line, sidx=None, eidx=None):
 
     # Log level
     matches = re.finditer("(DEBUG)|(INFO)|(INFORMATION)|(WARN)|(WARNING)|(ERROR)|(FAIL)|(FAILURE)", line)
-    addColors(matches, VAL_RED)
+    addColors(matches, AQUA_MARINE)
     
     # Std constants
     matches = re.finditer("(null)|(true)|(false)|(class)|(def)", line)
@@ -179,16 +184,22 @@ def printLine(line, sidx=None, eidx=None):
 
     # String constants
     matches = re.finditer("\"[^\"]*\"", line)
-    addColors(matches, VAL_RED)
+    addColors(matches, TOMATO)
 
     # Numeric constants
     matches = re.finditer("(?<![A-Za-z0-9.])[0-9.]+(?![A-Za-z0-9.])", line)
     addColors(matches, PINK)
+    
+    # Urls
+    matches = re.finditer("(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])", line)
+    addColors(matches, BLUE)
+
+    # Namespaces
+    matches = re.finditer("([\w]+\.)+[\w]+(?=[\s]|$)", line)
+    addColors(matches, LIGHT_SEA_GREEN)
 
     # GUIDS/MAC addresses
     # words ending with Exception
-    # Urls
-    # Namespaces
 
     # Printout
     print(lineColor(line, colors), end="")
