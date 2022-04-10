@@ -285,9 +285,7 @@ def interactiveFile(matchIdx, lineNum, filepath, lineOffset, terminalLines, curr
     terminalLines -= 2
     begin = int(max(1, lineNum - (terminalLines / 2) + lineOffset)) - 1
     end = min(len(lines), begin + terminalLines - 1)
-    print("begin: ", begin, "end: ", end, "terminal: ", terminalLines)
-    print("empty: ", terminalLines - (end - begin), "lines: ", (end - begin))
-    print(colorLine(filepath + " idx: " + str(currentMatchIdx), YELLOW)) # Current file
+    print(colorLine(filepath + " m: " + str(currentMatchIdx), YELLOW)) # Current file
     for i in range(begin, end):
         line = lines[i]
         if line[-1] != "\n":
@@ -312,7 +310,7 @@ def interactive():
     
     def onPress(key):
         nonlocal lineOffset, currentMatchIdx, rows
-        print(key)
+        printInteractiveFile = False
         if key == keyboard.Key.up or key == keyboard.Key.down:
             if key == keyboard.Key.up:
                 lineOffset += 1
@@ -320,7 +318,7 @@ def interactive():
                 lineOffset -= 1
             matchIdx, lineNumber, filepath = matches[currentMatchIdx]
             lineOffset = max(-lineNumber + (rows / 2), lineOffset)
-            interactiveFile(matchIdx, lineNumber, filepath, lineOffset, rows, currentMatchIdx)
+            printInteractiveFile = True
         elif key == keyboard.Key.right or key == keyboard.Key.left:
             if key == keyboard.Key.right:
                 currentMatchIdx += 1
@@ -330,16 +328,22 @@ def interactive():
                 currentMatchIdx = 0
             elif currentMatchIdx < 0:
                 currentMatchIdx = len(matches) - 1
-            matchIdx, lineNumber, filepath = matches[currentMatchIdx]
             lineOffset = 0
-            interactiveFile(matchIdx, lineNumber, filepath, lineOffset, rows, currentMatchIdx)
+            printInteractiveFile = True
+        elif key == keyboard.KeyCode.from_char("l"):
+            args.line = not args.line
+            printInteractiveFile = True
         elif key == keyboard.KeyCode.from_char("q"):
             return False
+
+        if printInteractiveFile:
+            matchIdx, lineNumber, filepath = matches[currentMatchIdx]
+            interactiveFile(matchIdx, lineNumber, filepath, lineOffset, rows, currentMatchIdx)
 
         
     with keyboard.Listener(on_press=onPress) as listener:
         listener.join()
-    print("",  flush=True)
+    listener.stop()
 
     
 
