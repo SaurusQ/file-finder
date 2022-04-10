@@ -34,7 +34,7 @@ DARK_RED        = (140,   0,   0)
 VAL_RED         = (240, 113, 124)
 GREEN           = (  0, 255,   0)
 LIME_GREEN      = ( 50, 205,  50)
-FOREST_GREEN    = ( 63, 220,  107)
+FOREST_GREEN    = ( 63, 220, 107)
 BLUE            = (  0,   0, 255)
 LIGHT_BLUE      = ( 16, 177, 254)
 ELEC_BLUE       = (125, 249, 255)
@@ -69,12 +69,12 @@ def handleFileType(subdir, filepath, filename):
             if not os.path.exists(outputPath):
                 os.mkdir(outputPath)
                 if filetype == "zip":
-                        print("Extracting zip file")
+                        print("Extracting zip file", filepath)
                         zfile = zipfile.ZipFile(filepath, "r")
                         zfile.extractall(outputPath)
                         zfile.close()
                 elif filetype == "tar":
-                        print("Extracting tar file")
+                        print("Extracting tar file", filepath)
                         tfile = tarfile.open(filepath)
                         tfile.extractall(outputPath)
                         tfile.close()
@@ -248,6 +248,11 @@ skippedFiles = []
 filesToParse = []
 
 def walk(walkpath):
+    # Check if the target if file
+    if os.path.isfile(walkpath):
+        filesToParse.append(walkpath)
+        return
+    
     # Iterate over all of the files
     for subdir, _, files in os.walk(walkpath):
         for f in files:
@@ -307,19 +312,24 @@ def interactive():
     
     def onPress(key):
         nonlocal lineOffset, currentMatchIdx, rows
+        print(key)
         if key == keyboard.Key.up or key == keyboard.Key.down:
             if key == keyboard.Key.up:
                 lineOffset += 1
             elif key == keyboard.Key.down:
                 lineOffset -= 1
             matchIdx, lineNumber, filepath = matches[currentMatchIdx]
+            lineOffset = max(-lineNumber + (rows / 2), lineOffset)
             interactiveFile(matchIdx, lineNumber, filepath, lineOffset, rows, currentMatchIdx)
         elif key == keyboard.Key.right or key == keyboard.Key.left:
             if key == keyboard.Key.right:
                 currentMatchIdx += 1
             elif key == keyboard.Key.left:
                 currentMatchIdx -= 1
-            currentMatchIdx = max(0, min(len(matches) - 1, currentMatchIdx))
+            if currentMatchIdx >= len(matches):
+                currentMatchIdx = 0
+            elif currentMatchIdx < 0:
+                currentMatchIdx = len(matches) - 1
             matchIdx, lineNumber, filepath = matches[currentMatchIdx]
             lineOffset = 0
             interactiveFile(matchIdx, lineNumber, filepath, lineOffset, rows, currentMatchIdx)
@@ -329,6 +339,7 @@ def interactive():
         
     with keyboard.Listener(on_press=onPress) as listener:
         listener.join()
+    print("",  flush=True)
 
     
 
