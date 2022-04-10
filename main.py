@@ -5,6 +5,8 @@ import tarfile
 import zipfile
 import re
 
+from matplotlib.pyplot import pink
+
 # Configuration
 bannedFileTypes = ["bin", "exe"]
 bannedFileNames = []
@@ -30,15 +32,17 @@ BLACK           = (  0,   0,   0)
 GREY            = ( 10,  10,  10)
 RED             = (255,   0,   0)
 DARK_RED        = (140,   0,   0)
-VAL_RED         = (189, 113, 124)
+VAL_RED         = (240, 113, 124)
 GREEN           = (  0, 255,   0)
 LIME_GREEN      = ( 50, 205,  50)
-FOREST_GREEN    = ( 34, 139,  34)
+FOREST_GREEN    = ( 63, 220,  107)
 BLUE            = (  0,   0, 255)
-LIGHT_BLUE      = ( 50, 150, 255)
+LIGHT_BLUE      = ( 16, 177, 254)
 ELEC_BLUE       = (125, 249, 255)
 YELLOW          = (255, 255,   0)
 DARK_YELLOW     = (139, 128,   0)
+PINK            = (255, 120, 248)
+
 
 matches = 0
 foundInFiles = 0
@@ -137,32 +141,47 @@ def printLine(line, sidx=None, eidx=None):
     #   print(lineColor(line, [(sidx, eidx, RED, False)]), end="")
 
     colors = []
+    ignoreRange = []
+
     # Match highlight
     if sidx != None and eidx != None:
         colors.append((sidx, eidx, DARK_RED, True))
-        #colors.append((sidx, eidx, BLACK, False))
+        colors.append((sidx, eidx, BLACK, False))
+
+    def addColors(m, c, bg=False):
+        nonlocal colors, ignoreRange
+        for i in m:
+            ignore = False
+            # Don't override other coloring
+            for r in ignoreRange:
+                if (r[0] <= i.start() < r[1]) or (r[0] < i.end() <= r[1]):
+                    ignore = True
+                    break
+            # Shoul we use this color
+            if not ignore:
+                colors.append((i.start(), i.end(), c, bg))
+                ignoreRange.append((i.start(), i.end()))
 
     # Time stamps
     matches = re.finditer("(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}(?:\.\d*)?)((-(\d{2}):(\d{2})|Z)?)", line)
-    for m in matches:
-        colors.append((m.start(), m.end(), FOREST_GREEN, False))
+    addColors(matches, FOREST_GREEN)
 
     # Log level
     matches = re.finditer("(DEBUG)|(INFO)|(INFORMATION)|(WARN)|(WARNING)|(ERROR)|(FAIL)|(FAILURE)", line)
-    for m in matches:
-        colors.append((m.start(), m.end(), VAL_RED, False))
+    addColors(matches, VAL_RED)
     
     # Std constants
     matches = re.finditer("(null)|(true)|(false)", line)
-    for m in matches:
-        colors.append((m.start(), m.end(), ELEC_BLUE, False))
+    addColors(matches, ELEC_BLUE)
 
     # String constants
     matches = re.finditer("\"[^\"]*\"", line)
-    for m in matches:
-        colors.append((m.start(), m.end(), VAL_RED, False))
+    addColors(matches, VAL_RED)
 
     # Numeric constants
+    matches = re.finditer("(?<![A-Za-z0-9.])[0-9.]+(?![A-Za-z0-9.])", line)
+    addColors(matches, PINK)
+
     # GUIDS/MAC addresses
     # words ending with Exception
     # Urls
@@ -252,7 +271,7 @@ def parse():
 def printStats():
     print(colorLine("Found " + str(matches) + " matches inside " + str(foundInFiles) + " different files", GREEN))
 
-#retval = lineColor("123456789012345678901234567890", [(0, 10, (255,0,0), False), (8, 20, (0, 255, 0), False), (5, 25, (0,0,255), False)])
+#retval = lineColor("123456789012345678901234567890", [(0, 10, (255,0,0), False), (11,20, (0,255,0), False)])#, (8, 20, (0, 255, 0), False), (5, 25, (0,0,255), False)])
 #print(retval)
 
 walk(args.directory)
