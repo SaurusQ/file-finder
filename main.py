@@ -1,11 +1,10 @@
 import argparse
-from msilib.schema import _Validation_records
 import os
 import tarfile
 import zipfile
 import re
-
-from matplotlib.pyplot import pink
+import shutil
+import sys
 
 # Configuration
 bannedFileTypes = ["bin", "exe"]
@@ -20,6 +19,7 @@ parser.add_argument("-e", "--extract", action="store_true", help="Extract zip, t
 parser.add_argument("-b", "--before", type=int, default=0, help="Show additional lines before a match")
 parser.add_argument("-a", "--after", type=int, default=0, help="Show additional lines after a match")
 parser.add_argument("-l", "--line", action="store_true", help="Print line numbers")
+parser.add_argument("-i", "--interactive", action="store_true", help="Interactive search")
 parser.add_argument("--skipped", action="store_true", help="Show skipped files")
 
 args = parser.parse_args()
@@ -44,7 +44,7 @@ DARK_YELLOW     = (139, 128,   0)
 PINK            = (255, 120, 248)
 
 
-matches = 0
+matches = []
 foundInFiles = 0
 
 def handleFileType(subdir, filepath, filename):
@@ -102,7 +102,8 @@ def handleFile(filepath):
         for w in searchWords:
             idx = line.find(w)
             if idx != -1:
-                matches += 1
+                # Store matches
+                matches.append(((idx, idx + len(w)), lineNumber, filepath))
                 lineMatch = True
                 # Print the file path when some match is found
                 if not foundMatch:
@@ -272,7 +273,66 @@ def parse():
             print(colorLine(filepath, RED))
 
 def printStats():
-    print(colorLine("Found " + str(matches) + " matches inside " + str(foundInFiles) + " different files", GREEN))
+    print(colorLine("Found " + str(len(matches)) + " matches inside " + str(foundInFiles) + " different files", GREEN))
+
+def interactiveFile(matchIdx, lineNum, filepath, lineOffset, terminalLines, currentMatchIdx):
+    file = open(filepath, "r")
+    lines = file.readlines()
+    terminalLines -= 2
+    begin = int(max(1, lineNum - (terminalLines / 2) + lineOffset)) - 1
+    end = min(len(lines), begin + terminalLines - 1)
+    print("begin: ", begin, "end: ", end, "terminal: ", terminalLines)
+    print("empty: ", terminalLines - (end - begin), "lines: ", (end - begin))
+    print(colorLine(filepath + " idx: " + str(currentMatchIdx), YELLOW)) # Current file
+    for i in range(begin, end):
+        line = lines[i]
+        if line[-1] != "\n":
+            line += "\n"
+        if args.line:
+            printLineNumber(i + 1)
+        if i + 1 == lineNum: # Match line
+            printLine(line, matchIdx[0], matchIdx[1])
+        else: # Other lines
+            printLine(line)
+    for i in range(terminalLines - (end - begin)):
+        print()
+    sys.stdout.flush()
+    
+        
+def interactive():
+    from pynput import keyboard
+
+    lineOffset = 0
+    currentMatchIdx = len(matches)
+    rows = 24
+    
+    def onPress(key):
+        nonlocal lineOffset, currentMatchIdx, rows
+        if key == keyboard.Key.up or key == keyboard.Key.down:
+            if key == keyboard.Key.up:
+                lineOffset += 1
+            elif key == keyboard.Key.down:
+                lineOffset -= 1
+            matchIdx, lineNumber, filepath = matches[currentMatchIdx]
+            interactiveFile(matchIdx, lineNumber, filepath, lineOffset, rows, currentMatchIdx)
+        elif key == keyboard.Key.right or key == keyboard.Key.left:
+            if key == keyboard.Key.right:
+                currentMatchIdx += 1
+            elif key == keyboard.Key.left:
+                currentMatchIdx -= 1
+            currentMatchIdx = max(0, min(len(matches) - 1, currentMatchIdx))
+            matchIdx, lineNumber, filepath = matches[currentMatchIdx]
+            lineOffset = 0
+            interactiveFile(matchIdx, lineNumber, filepath, lineOffset, rows, currentMatchIdx)
+        elif key == keyboard.KeyCode.from_char("q"):
+            return False
+
+        
+    with keyboard.Listener(on_press=onPress) as listener:
+        listener.join()
+
+    
+
 
 #retval = lineColor("123456789012345678901234567890", [(0, 10, (255,0,0), False), (11,20, (0,255,0), False)])#, (8, 20, (0, 255, 0), False), (5, 25, (0,0,255), False)])
 #print(retval)
@@ -280,3 +340,10 @@ def printStats():
 walk(args.directory)
 parse()
 printStats()
+
+import sys
+sys.stdout.flush()
+
+if args.interactive:
+    print("Interactive")
+    interactive()
