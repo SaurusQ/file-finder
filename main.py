@@ -285,7 +285,8 @@ def interactiveFile(matchIdx, lineNum, filepath, lineOffset, terminalLines, curr
     terminalLines -= 2
     begin = int(max(1, lineNum - (terminalLines / 2) + lineOffset)) - 1
     end = min(len(lines), begin + terminalLines - 1)
-    print(colorLine(filepath + " m: " + str(currentMatchIdx), YELLOW)) # Current file
+    print()
+    print(colorLine(filepath + " m: " + str(currentMatchIdx + 1) + " / " + str(len(matches)), YELLOW)) # Current file
     for i in range(begin, end):
         line = lines[i]
         if line[-1] != "\n":
@@ -305,7 +306,7 @@ def interactive():
     from pynput import keyboard
 
     lineOffset = 0
-    currentMatchIdx = len(matches)
+    currentMatchIdx = 0
     rows = 24
     
     def onPress(key):
