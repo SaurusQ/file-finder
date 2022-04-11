@@ -4,6 +4,7 @@ import tarfile
 import zipfile
 import re
 import sys
+import math
 
 # Configuration
 bannedFileTypes = ["bin", "exe"]
@@ -290,35 +291,61 @@ def parse():
 def printStats():
     print(colorLine("Found " + str(len(matches)) + " matches inside " + str(foundInFiles) + " different files", GREEN))
 
-def interactiveFile(matchIdx, lineNum, filepath, lineOffset, terminalLines, currentMatchIdx):
+def printInteractiveHelp():
+    print()
+    print("[q]          quit the program")
+    print("[h]          show this message")
+    print("[right]      next match")
+    print("[left]       previous match")
+    print("[ctrl]       match in next file")
+    print("[up/down]    scroll file")
+    print(":", end="")
+    sys.stdout.flush()
+
+def interactiveFile(matchIdx, lineNum, filepath, lineOffset, terminal, currentMatchIdx):
     file = open(filepath, "r")
     lines = file.readlines()
-    terminalLines -= 2
-    begin = int(max(1, lineNum - (terminalLines / 2) + lineOffset)) - 1
-    end = min(len(lines), begin + terminalLines - 1)
+    terminalRows = terminal[0]
+    terminalWidth = terminal[1]
+    terminalRows -= 2
+    begin = int(max(1, lineNum - (terminalRows / 2) + lineOffset)) - 1
+    end = min(len(lines), begin + terminalRows - 1)
+    usedLines = (end - begin)
+    emptyLines = terminalRows - usedLines
     print()
     print(colorLine(filepath + " m: " + str(currentMatchIdx + 1) + " / " + str(len(matches)), YELLOW)) # Current file
     for i in range(begin, end):
         line = lines[i]
         if line[-1] != "\n":
             line += "\n"
+        lineWidth = math.ceil((args.line * 6 + len(line)) / terminalWidth)
+        usedLines -= lineWidth
+        if usedLines < 0:
+            emptyLines += usedLines
+            if emptyLines < 0:
+                emptyLines -= usedLines
+                break
+            usedLines = 0
         if args.line:
             printLineNumber(i + 1)
         if i + 1 == lineNum: # Match line
             printLine(line, matchIdx[0], matchIdx[1])
         else: # Other lines
             printLine(line)
-    for i in range(terminalLines - (end - begin)):
+    for i in range(emptyLines):
         print()
+    print(":", end="")
     sys.stdout.flush()
     
-        
+def getTerminalSize():
+    return (24, 80) # TODO
+
 def interactive():
     from pynput import keyboard
 
     lineOffset = 0
     currentMatchIdx = 0
-    rows = 24
+    terminalSize = getTerminalSize()
     
     ctrlPressed = False
     def onRelease(key):
@@ -327,15 +354,15 @@ def interactive():
             ctrlPressed = False
 
     def onPress(key):
-        nonlocal lineOffset, currentMatchIdx, rows, ctrlPressed
+        nonlocal lineOffset, currentMatchIdx, terminalSize, ctrlPressed
         printInteractiveFile = False
         if key == keyboard.Key.up or key == keyboard.Key.down:
             if key == keyboard.Key.up:
-                lineOffset += 1
-            elif key == keyboard.Key.down:
                 lineOffset -= 1
+            elif key == keyboard.Key.down:
+                lineOffset += 1
             matchIdx, lineNumber, filepath = matches[currentMatchIdx]
-            lineOffset = max(-lineNumber + (rows / 2), lineOffset)
+            lineOffset = max(-lineNumber + (terminalSize[0] / 2), lineOffset)
             printInteractiveFile = True
         elif key == keyboard.Key.right or key == keyboard.Key.left:
             if key == keyboard.Key.right:
@@ -367,6 +394,7 @@ def interactive():
                 currentMatchIdx = 0
             elif currentMatchIdx < 0:
                 currentMatchIdx = len(matches) - 1
+            
             lineOffset = 0
             printInteractiveFile = True
         elif key == keyboard.Key.ctrl_l:
@@ -374,12 +402,14 @@ def interactive():
         elif key == keyboard.KeyCode.from_char("l"):
             args.line = not args.line
             printInteractiveFile = True
+        elif key == keyboard.KeyCode.from_char("h"):
+            printInteractiveHelp()
         elif key == keyboard.KeyCode.from_char("q"):
             return False
 
         if printInteractiveFile:
             matchIdx, lineNumber, filepath = matches[currentMatchIdx]
-            interactiveFile(matchIdx, lineNumber, filepath, lineOffset, rows, currentMatchIdx)
+            interactiveFile(matchIdx, lineNumber, filepath, lineOffset, terminalSize, currentMatchIdx)
 
         
     with keyboard.Listener(on_press=onPress, on_release=onRelease) as listener:
