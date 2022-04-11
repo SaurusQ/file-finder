@@ -31,7 +31,7 @@ BLACK           = (  0,   0,   0)
 GREY            = ( 10,  10,  10)
 RED             = (255,   0,   0)
 DARK_RED        = (140,   0,   0)
-VAL_RED         = (240, 113, 124)
+LIGHT_RED       = (240, 113, 124)
 FIRE_BRICK      = (178,  34,  34)
 TOMATO          = (255,  99,  71)
 DARK_ORANGE     = (255, 140,   0)
@@ -320,8 +320,14 @@ def interactive():
     currentMatchIdx = 0
     rows = 24
     
+    ctrlPressed = False
+    def onRelease(key):
+        nonlocal ctrlPressed
+        if key == keyboard.Key.ctrl_l:
+            ctrlPressed = False
+
     def onPress(key):
-        nonlocal lineOffset, currentMatchIdx, rows
+        nonlocal lineOffset, currentMatchIdx, rows, ctrlPressed
         printInteractiveFile = False
         if key == keyboard.Key.up or key == keyboard.Key.down:
             if key == keyboard.Key.up:
@@ -333,15 +339,38 @@ def interactive():
             printInteractiveFile = True
         elif key == keyboard.Key.right or key == keyboard.Key.left:
             if key == keyboard.Key.right:
-                currentMatchIdx += 1
+                if ctrlPressed:
+                    _, _, originalFilepath = matches[currentMatchIdx]
+                    while True:
+                        currentMatchIdx += 1
+                        if currentMatchIdx >= len(matches):
+                            break
+                        _, _, newFilepath = matches[currentMatchIdx]
+                        if originalFilepath != newFilepath:
+                            break
+                else:
+                    currentMatchIdx += 1
             elif key == keyboard.Key.left:
-                currentMatchIdx -= 1
+                if ctrlPressed:
+                    _, _, originalFilepath = matches[currentMatchIdx]
+                    while True:
+                        currentMatchIdx -= 1
+                        if currentMatchIdx < 0:
+                            break
+                        _, _, newFilepath = matches[currentMatchIdx]
+                        if originalFilepath != newFilepath:
+                            break
+                else:
+                    currentMatchIdx -= 1
+            # Limit the idx range
             if currentMatchIdx >= len(matches):
                 currentMatchIdx = 0
             elif currentMatchIdx < 0:
                 currentMatchIdx = len(matches) - 1
             lineOffset = 0
             printInteractiveFile = True
+        elif key == keyboard.Key.ctrl_l:
+            ctrlPressed = True
         elif key == keyboard.KeyCode.from_char("l"):
             args.line = not args.line
             printInteractiveFile = True
@@ -353,7 +382,7 @@ def interactive():
             interactiveFile(matchIdx, lineNumber, filepath, lineOffset, rows, currentMatchIdx)
 
         
-    with keyboard.Listener(on_press=onPress) as listener:
+    with keyboard.Listener(on_press=onPress, on_release=onRelease) as listener:
         listener.join()
     listener.stop()
 
