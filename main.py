@@ -19,6 +19,7 @@ parser.add_argument("-e", "--extract", action="store_true", help="Extract zip, t
 parser.add_argument("-b", "--before", type=int, default=0, help="Show additional lines before a match")
 parser.add_argument("-a", "--after", type=int, default=0, help="Show additional lines after a match")
 parser.add_argument("-l", "--line", action="store_true", help="Print line numbers")
+parser.add_argument("-p", "--print", action="store_true", help="View the file contents")
 parser.add_argument("-i", "--interactive", action="store_true", help="Interactive search")
 parser.add_argument("--skipped", action="store_true", help="Show skipped files")
 
@@ -27,6 +28,9 @@ args = parser.parse_args()
 searchWords = ["test"]
 for w in args.search:
     searchWords.append(w)
+
+if args.print: # Empty search words for viewing
+    searchWords = []
 
 BLACK           = (  0,   0,   0)
 GREY            = ( 10,  10,  10)
@@ -103,42 +107,54 @@ def handleFile(filepath):
         # Force line break to the last line
         if line[-1] != "\n":
             line += "\n"
-        lineMatch = False
-        for w in searchWords:
-            idx = line.find(w)
-            if idx != -1:
-                # Store matches
-                matches.append(((idx, idx + len(w)), lineNumber, filepath))
-                lineMatch = True
-                # Print the file path when some match is found
-                if not foundMatch:
-                    foundInFiles += 1
-                    foundMatch = True
-                    print(colorLine(filepath, YELLOW))
-                else:
-                    if beforeSize > args.before:
-                        print(colorLine("------", LIGHT_BLUE))
-                # Print lines before a match
-                for i in reversed(range(min(beforeSize, args.before))):
-                    printLineNumber(lineNumber - i - 1)
-                    printLine(lineBefore[(lineNumber - i - 1) % args.before])
-                beforeSize = 0
-                # Print the matched line
+
+        if args.print:
+            if not foundMatch:
+                foundMatch = True
+                matches.append(((0, 0), 0, filepath))
+                foundInFiles += 1
+                print(colorLine(filepath, YELLOW))
+            if args.line:
                 printLineNumber(lineNumber)
-                printLine(line, idx, idx + len(w))
-                pafter = args.after
-                break
-        # Printing after a match
-        if not lineMatch:
-            if pafter:
-                pafter -= 1
-                printLineNumber(lineNumber)
-                printLine(line)
-                continue
-            # Save lines to print before a match
-            elif args.before > 0:
-                beforeSize += 1
-                lineBefore[lineNumber % args.before] = line
+            printLine(line)
+        else:
+            lineMatch = False
+            for w in searchWords:
+                idx = line.find(w)
+                if idx != -1:
+                    # Store matches
+                    matches.append(((idx, idx + len(w)), lineNumber, filepath))
+                    lineMatch = True
+                    # Print the file path when some match is found
+                    if not foundMatch:
+                        foundInFiles += 1
+                        foundMatch = True
+                        print(colorLine(filepath, YELLOW))
+                    else:
+                        if beforeSize > args.before:
+                            print(colorLine("------", LIGHT_BLUE))
+                    # Print lines before a match
+                    for i in reversed(range(min(beforeSize, args.before))):
+                        printLineNumber(lineNumber - i - 1)
+                        printLine(lineBefore[(lineNumber - i - 1) % args.before])
+                    beforeSize = 0
+                    # Print the matched line
+                    printLineNumber(lineNumber)
+                    printLine(line, idx, idx + len(w))
+                    pafter = args.after
+                    break
+            # Printing after a match
+            if not lineMatch:
+                if pafter:
+                    pafter -= 1
+                    printLineNumber(lineNumber)
+                    printLine(line)
+                    continue
+                # Save lines to print before a match
+                elif args.before > 0:
+                    beforeSize += 1
+                    lineBefore[lineNumber % args.before] = line
+    file.close()
     return foundMatch
 
 
@@ -336,6 +352,7 @@ def interactiveFile(matchIdx, lineNum, filepath, lineOffset, terminal, currentMa
         print()
     print(":", end="")
     sys.stdout.flush()
+    file.close()
     
 def getTerminalSize():
     return (24, 80) # TODO
