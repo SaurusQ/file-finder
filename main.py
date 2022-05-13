@@ -447,6 +447,7 @@ def interactive():
         if printInteractiveFile:
             matchIdx, lineNumber, filepath = matches[currentMatchIdx]
             interactiveFile(matchIdx, lineNumber, filepath, lineOffset, terminalSize, currentMatchIdx)
+        return True
 
         
     with keyboard.Listener(on_press=onPress, on_release=onRelease) as listener:
