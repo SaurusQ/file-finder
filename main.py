@@ -1,6 +1,8 @@
 import argparse
 import os
+import shutil
 import tarfile
+from turtle import fd
 import zipfile
 import re
 import sys
@@ -21,6 +23,7 @@ parser.add_argument("-a", "--after", type=int, default=0, help="Show additional 
 parser.add_argument("-l", "--line", action="store_true", help="Print line numbers")
 parser.add_argument("-p", "--print", action="store_true", help="View the file contents")
 parser.add_argument("-i", "--interactive", action="store_true", help="Interactive search")
+parser.add_argument("-g", "--no-highligth", action="store_true", help="Remove all colors from the cli except the search term.")
 parser.add_argument("--skipped", action="store_true", help="Show skipped files")
 
 args = parser.parse_args()
@@ -170,53 +173,57 @@ def printLine(line, sidx=None, eidx=None):
 
     # Match highlight
     if sidx != None and eidx != None:
-        colors.append((sidx, eidx, DARK_RED, True))
-        colors.append((sidx, eidx, BLACK, False))
+        if args.no_highligth:
+            colors.append((sidx, eidx, RED, False))
+        else:
+            colors.append((sidx, eidx, DARK_RED, True))
+            colors.append((sidx, eidx, BLACK, False))
 
-    def addColors(m, c, bg=False):
-        nonlocal colors, ignoreRange
-        for i in m:
-            ignore = False
-            # Don't override other coloring
-            for r in ignoreRange:
-                if (r[0] <= i.start() < r[1]) or (r[0] < i.end() <= r[1]):
-                    ignore = True
-                    break
-            # Shoul we use this color
-            if not ignore:
-                colors.append((i.start(), i.end(), c, bg))
-                ignoreRange.append((i.start(), i.end()))
+    if not args.no_highligth:
+        def addColors(m, c, bg=False):
+            nonlocal colors, ignoreRange
+            for i in m:
+                ignore = False
+                # Don't override other coloring
+                for r in ignoreRange:
+                    if (r[0] <= i.start() < r[1]) or (r[0] < i.end() <= r[1]):
+                        ignore = True
+                        break
+                # Shoul we use this color
+                if not ignore:
+                    colors.append((i.start(), i.end(), c, bg))
+                    ignoreRange.append((i.start(), i.end()))
 
-    # Time stamps
-    matches = re.finditer("(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}(?:\.\d*)?)((-(\d{2}):(\d{2})|Z)?)", line)
-    addColors(matches, FOREST_GREEN)
+        # Time stamps
+        matches = re.finditer("(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}(?:\.\d*)?)((-(\d{2}):(\d{2})|Z)?)", line)
+        addColors(matches, FOREST_GREEN)
 
-    # Log level
-    matches = re.finditer("(DEBUG)|(INFO)|(INFORMATION)|(WARN)|(WARNING)|(ERROR)|(FAIL)|(FAILURE)", line)
-    addColors(matches, AQUA_MARINE)
-    
-    # Std constants
-    matches = re.finditer("(null)|(true)|(false)|(class)|(def)", line)
-    addColors(matches, ELEC_BLUE)
+        # Log level
+        matches = re.finditer("(DEBUG)|(INFO)|(INFORMATION)|(WARN)|(WARNING)|(ERROR)|(FAIL)|(FAILURE)", line)
+        addColors(matches, AQUA_MARINE)
+        
+        # Std constants
+        matches = re.finditer("(null)|(true)|(false)|(class)|(def)", line)
+        addColors(matches, ELEC_BLUE)
 
-    # String constants
-    matches = re.finditer("\"[^\"]*\"", line)
-    addColors(matches, TOMATO)
+        # String constants
+        matches = re.finditer("\"[^\"]*\"", line)
+        addColors(matches, TOMATO)
 
-    # Numeric constants
-    matches = re.finditer("(?<![A-Za-z0-9.])[0-9.]+(?![A-Za-z0-9.])", line)
-    addColors(matches, PINK)
-    
-    # Urls
-    matches = re.finditer("(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])", line)
-    addColors(matches, BLUE)
+        # Numeric constants
+        matches = re.finditer("(?<![A-Za-z0-9.])[0-9.]+(?![A-Za-z0-9.])", line)
+        addColors(matches, PINK)
+        
+        # Urls
+        matches = re.finditer("(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])", line)
+        addColors(matches, BLUE)
 
-    # Namespaces
-    matches = re.finditer("([\w]+\.)+[\w]+(?=[\s]|$)", line)
-    addColors(matches, LIGHT_SEA_GREEN)
+        # Namespaces
+        matches = re.finditer("([\w]+\.)+[\w]+(?=[\s]|$)", line)
+        addColors(matches, LIGHT_SEA_GREEN)
 
-    # GUIDS/MAC addresses
-    # words ending with Exception
+        # GUIDS/MAC addresses
+        # words ending with Exception
 
     # Printout
     print(lineColor(line, colors), end="")
@@ -306,6 +313,7 @@ def parse():
 
 def printStats():
     print(colorLine("Found " + str(len(matches)) + " matches inside " + str(foundInFiles) + " different files", GREEN))
+    getTerminalSize()
 
 def printInteractiveHelp():
     print()
@@ -355,14 +363,25 @@ def interactiveFile(matchIdx, lineNum, filepath, lineOffset, terminal, currentMa
     file.close()
     
 def getTerminalSize():
-    return (24, 80) # TODO
+    retval = (80, 24)
+    try:
+        ts = os.get_terminal_size()
+        retval = (ts.lines, ts.columns)
+    except Exception as e:
+        import subprocess
+        try:
+            cols = int(subprocess.check_output("tput cols"))
+            rows = int(subprocess.check_output("tput lines"))
+            retval = (rows, cols)
+        except:
+            pass
+    return retval
 
 def interactive():
     from pynput import keyboard
 
     lineOffset = 0
     currentMatchIdx = 0
-    terminalSize = getTerminalSize()
     
     ctrlPressed = False
     def onRelease(key):
@@ -371,7 +390,8 @@ def interactive():
             ctrlPressed = False
 
     def onPress(key):
-        nonlocal lineOffset, currentMatchIdx, terminalSize, ctrlPressed
+        nonlocal lineOffset, currentMatchIdx, ctrlPressed
+        terminalSize = getTerminalSize()
         printInteractiveFile = False
         if key == keyboard.Key.up or key == keyboard.Key.down:
             if key == keyboard.Key.up:
