@@ -1,8 +1,6 @@
 import argparse
 import os
-import shutil
 import tarfile
-from turtle import fd
 import zipfile
 import re
 import sys
