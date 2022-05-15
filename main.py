@@ -6,6 +6,12 @@ import re
 import sys
 import math
 
+# Enable windows Console Virtual Terminal Sequences
+if os.name == 'nt':
+    import ctypes
+    kernel32 = ctypes.windll.kernel32
+    kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+
 # Configuration
 bannedFileTypes = ["bin", "exe"]
 bannedFileNames = []
@@ -379,26 +385,20 @@ def interactive():
     lineOffset = 0
     currentMatchIdx = 0
     
-    ctrlPressed = False
-    def onRelease(key):
-        nonlocal ctrlPressed
-        if key == keyboard.Key.ctrl_l:
-            ctrlPressed = False
-
-    def onPress(key):
-        nonlocal lineOffset, currentMatchIdx, ctrlPressed
+    def onPress(key, ctrlPressed):
+        nonlocal lineOffset, currentMatchIdx
         terminalSize = getTerminalSize()
         printInteractiveFile = False
-        if key == keyboard.Key.up or key == keyboard.Key.down:
-            if key == keyboard.Key.up:
+        if key == "up" or key == "down":
+            if key == "up":
                 lineOffset -= 1
-            elif key == keyboard.Key.down:
+            elif key == "down":
                 lineOffset += 1
             matchIdx, lineNumber, filepath = matches[currentMatchIdx]
             lineOffset = max(-lineNumber + (terminalSize[0] / 2), lineOffset)
             printInteractiveFile = True
-        elif key == keyboard.Key.right or key == keyboard.Key.left:
-            if key == keyboard.Key.right:
+        elif key == "right" or key == "left":
+            if key == "right":
                 if ctrlPressed:
                     _, _, originalFilepath = matches[currentMatchIdx]
                     while True:
@@ -410,7 +410,7 @@ def interactive():
                             break
                 else:
                     currentMatchIdx += 1
-            elif key == keyboard.Key.left:
+            elif key == "left":
                 if ctrlPressed:
                     _, _, originalFilepath = matches[currentMatchIdx]
                     while True:
@@ -430,25 +430,50 @@ def interactive():
             
             lineOffset = 0
             printInteractiveFile = True
-        elif key == keyboard.Key.ctrl_l:
-            ctrlPressed = True
-        elif key == keyboard.KeyCode.from_char("l"):
+        elif key == "l":
             args.line = not args.line
             printInteractiveFile = True
-        elif key == keyboard.KeyCode.from_char("h"):
+        elif key == "h":
             printInteractiveHelp()
-        elif key == keyboard.KeyCode.from_char("q"):
+        elif key == "q":
             return False
 
         if printInteractiveFile:
             matchIdx, lineNumber, filepath = matches[currentMatchIdx]
             interactiveFile(matchIdx, lineNumber, filepath, lineOffset, terminalSize, currentMatchIdx)
         return True
+    try:
+        from msvcrt import getwch as getChar
+    except:
+        def getChar():
+            import tty, termios
+            fd = sys.stdin.fileno()
+            old = termios.tcgetattr(fd)
+            try:
+                tty.setraw(fd)
+                return sys.stdin.read(1)
+            finally:
+                termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
-        
-    with keyboard.Listener(on_press=onPress, on_release=onRelease) as listener:
-        listener.join()
-    listener.stop()
+    while True:
+        key = getChar()
+        try:
+            v = ord(key)
+        except:
+            continue
+
+        if v == 224:
+            continue
+        arrows = {72: "up", 75: "left", 80: "down", 77: "right"}
+        ctrlArrows = {141: "up", 115: "left", 145: "down", 116: "right"}
+        if key in ["l", "h", "q"]:
+            if not onPress(key, False):
+                return
+        else:
+            if v in arrows:
+                onPress(arrows[v], False)
+            elif v in ctrlArrows:
+                onPress(ctrlArrows[v], True)
 
 #retval = lineColor("123456789012345678901234567890", [(0, 10, (255,0,0), False), (11,20, (0,255,0), False)])#, (8, 20, (0, 255, 0), False), (5, 25, (0,0,255), False)])
 #print(retval)
