@@ -57,7 +57,7 @@ PINK            = (255, 120, 248)
 matches = []
 foundInFiles = 0
 
-def handleFileType(subdir, filepath, filename):
+def handleFileType(subdir, filepath, filename, savedPaths):
     
     # Handle banned files
     if filename in bannedFileNames:
@@ -89,7 +89,7 @@ def handleFileType(subdir, filepath, filename):
                         tfile = tarfile.open(filepath)
                         tfile.extractall(outputPath)
                         tfile.close()
-                walk(outputPath)
+                walk(outputPath, savedPaths)
         return False
     return True
 
@@ -277,10 +277,8 @@ def getDefaultColor(background=False):
     else:
         return "\033[38;2;255;255;255m"
 
-skippedFiles = []
-filesToParse = []
-
-def walk(walkpath):
+## Go through all the files in a directory and add them to a list
+def walk(walkpath, savedPaths, skippedFiles):
     # Check if the target if file
     if os.path.isfile(walkpath):
         filesToParse.append(walkpath)
@@ -290,12 +288,12 @@ def walk(walkpath):
     for subdir, _, files in os.walk(walkpath):
         for f in files:
             path = os.path.join(subdir, f)
-            if handleFileType(subdir, path, f):
+            if handleFileType(subdir, path, f, savedPaths):
                 filesToParse.append(path)
             else:
                 skippedFiles.append(path)
 
-def parse():
+def parse(skippedFiles):
     # Run search on all valid files
     nothingFound = []
     for filepath in filesToParse:
@@ -455,8 +453,10 @@ def interactive():
 #retval = lineColor("123456789012345678901234567890", [(0, 10, (255,0,0), False), (11,20, (0,255,0), False)])#, (8, 20, (0, 255, 0), False), (5, 25, (0,0,255), False)])
 #print(retval)
 
-walk(args.directory)
-parse()
+skippedFiles = []
+filesToParse = []
+walk(args.directory, filesToParse, skippedFiles)
+parse(skippedFiles)
 printStats()
 
 sys.stdout.flush()
