@@ -26,6 +26,7 @@ parser.add_argument("-b", "--before", type=int, default=0, help="Show additional
 parser.add_argument("-a", "--after", type=int, default=0, help="Show additional lines after a match")
 parser.add_argument("-l", "--line", action="store_true", help="Print line numbers")
 parser.add_argument("-p", "--print", action="store_true", help="View the file contents")
+parser.add_argument("-f", "--files", action="store_true", help="Show only files where matches were found")
 parser.add_argument("-i", "--interactive", action="store_true", help="Interactive search")
 parser.add_argument("-g", "--no-highligth", action="store_true", help="Remove all colors from the cli except the search term.")
 parser.add_argument("--skipped", action="store_true", help="Show skipped files")
@@ -126,32 +127,34 @@ def handleFile(filepath):
             printLine(line)
         else:
             lineMatch = False
+            currentMatches = []
             for w in searchWords:
-                idx = line.find(w)
-                if idx != -1:
+                for r in re.finditer(w, line):
                     # Store matches
-                    matches.append(((idx, idx + len(w)), lineNumber, filepath))
+                    currentMatches.append((r.start(), r.end()))
+                    matches.append(((r.start(), r.end()), lineNumber, filepath))
                     lineMatch = True
-                    # Print the file path when some match is found
-                    if not foundMatch:
-                        foundInFiles += 1
-                        foundMatch = True
-                        print(colorLine(filepath, YELLOW))
-                    else:
-                        if beforeSize > args.before:
-                            print(colorLine("------", LIGHT_BLUE))
-                    # Print lines before a match
-                    for i in reversed(range(min(beforeSize, args.before))):
-                        printLineNumber(lineNumber - i - 1)
-                        printLine(lineBefore[(lineNumber - i - 1) % args.before])
-                    beforeSize = 0
-                    # Print the matched line
-                    printLineNumber(lineNumber)
-                    printLine(line, idx, idx + len(w))
-                    pafter = args.after
-                    break
-            # Printing after a match
-            if not lineMatch:
+            if lineMatch:
+                # Print the file path when some match is found
+                if not foundMatch:
+                    foundInFiles += 1
+                    foundMatch = True
+                    print(colorLine(filepath, YELLOW))
+                else:
+                    if beforeSize > args.before and not args.files:
+                        print(colorLine("------", LIGHT_BLUE))
+                if args.files:
+                    continue
+                # Print lines before a match
+                for i in reversed(range(min(beforeSize, args.before))):
+                    printLineNumber(lineNumber - i - 1)
+                    printLine(lineBefore[(lineNumber - i - 1) % args.before])
+                beforeSize = 0
+                # Print the matched line
+                printLineNumber(lineNumber)
+                printLine(line, currentMatches)
+                pafter = args.after
+            else:   # Printing after a match
                 if pafter:
                     pafter -= 1
                     printLineNumber(lineNumber)
@@ -165,23 +168,18 @@ def handleFile(filepath):
     return foundMatch
 
 
-def printLine(line, sidx=None, eidx=None):
-    # Basic printout
-    #if sidx == None:
-    #    print(line, end="")
-    #else:
-    #   print(lineColor(line, [(sidx, eidx, RED, False)]), end="")
-
+def printLine(line, foundMatches=None):
     colors = []
     ignoreRange = []
 
     # Match highlight
-    if sidx != None and eidx != None:
-        if args.no_highligth:
-            colors.append((sidx, eidx, RED, False))
-        else:
-            colors.append((sidx, eidx, DARK_RED, True))
-            colors.append((sidx, eidx, BLACK, False))
+    if foundMatches != None:
+        for m in foundMatches:
+            if args.no_highligth:
+                colors.append((m[0], m[1], RED, False))
+            else:
+                colors.append((m[0], m[1], DARK_RED, True))
+                colors.append((m[0], m[1], BLACK, False))
 
     if not args.no_highligth:
         def addColors(m, c, bg=False):
@@ -199,32 +197,32 @@ def printLine(line, sidx=None, eidx=None):
                     ignoreRange.append((i.start(), i.end()))
 
         # Time stamps
-        matches = re.finditer("(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}(?:\.\d*)?)((-(\d{2}):(\d{2})|Z)?)", line)
-        addColors(matches, FOREST_GREEN)
+        colorings = re.finditer("(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}(?:\.\d*)?)((-(\d{2}):(\d{2})|Z)?)", line)
+        addColors(colorings, FOREST_GREEN)
 
         # Log level
-        matches = re.finditer("(DEBUG)|(INFO)|(INFORMATION)|(WARN)|(WARNING)|(ERROR)|(FAIL)|(FAILURE)", line)
-        addColors(matches, AQUA_MARINE)
+        colorings = re.finditer("(DEBUG)|(INFO)|(INFORMATION)|(WARN)|(WARNING)|(ERROR)|(FAIL)|(FAILURE)", line)
+        addColors(colorings, AQUA_MARINE)
         
         # Std constants
-        matches = re.finditer("(null)|(true)|(false)|(class)|(def)", line)
-        addColors(matches, ELEC_BLUE)
+        colorings = re.finditer("(null)|(true)|(false)|(class)|(def)", line)
+        addColors(colorings, ELEC_BLUE)
 
         # String constants
-        matches = re.finditer("\"[^\"]*\"", line)
-        addColors(matches, TOMATO)
+        colorings = re.finditer("\"[^\"]*\"", line)
+        addColors(colorings, TOMATO)
 
         # Numeric constants
-        matches = re.finditer("(?<![A-Za-z0-9.])[0-9.]+(?![A-Za-z0-9.])", line)
-        addColors(matches, PINK)
+        colorings = re.finditer("(?<![A-Za-z0-9.])[0-9.]+(?![A-Za-z0-9.])", line)
+        addColors(colorings, PINK)
         
         # Urls
-        matches = re.finditer("(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])", line)
-        addColors(matches, BLUE)
+        colorings = re.finditer("(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])", line)
+        addColors(colorings, BLUE)
 
         # Namespaces
-        matches = re.finditer("([\w]+\.)+[\w]+(?=[\s]|$)", line)
-        addColors(matches, LIGHT_SEA_GREEN)
+        colorings = re.finditer("([\w]+\.)+[\w]+(?=[\s]|$)", line)
+        addColors(colorings, LIGHT_SEA_GREEN)
 
         # GUIDS/MAC addresses
         # words ending with Exception
@@ -355,7 +353,7 @@ def interactiveFile(matchIdx, lineNum, filepath, lineOffset, terminal, currentMa
         if args.line:
             printLineNumber(i + 1)
         if i + 1 == lineNum: # Match line
-            printLine(line, matchIdx[0], matchIdx[1])
+            printLine(line, [matchIdx])
         else: # Other lines
             printLine(line)
     for i in range(emptyLines):

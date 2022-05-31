@@ -20,6 +20,7 @@ Tested on Windows terminal.
         -a AFTER, --after AFTER         Show additional lines a match
         -l, --line                      Print line numbers
         -p, --print                     View the file contents
+        -f, --files                     Show only files where matches were found
         -i, --interactive               Interactive search
         -g, --no-highligth              Less colorful higlighting
         --skipped                       Show skipped files
