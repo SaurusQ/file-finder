@@ -3,7 +3,7 @@
 A simple python program for searching files.
 Automatically extracts compressed files.
 Has a interactive mode.
-Tested on git bash on windows.
+Tested on Windows terminal.
 
 ## Options
 
