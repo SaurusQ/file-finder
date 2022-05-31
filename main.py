@@ -33,7 +33,6 @@ parser.add_argument("--skipped", action="store_true", help="Show skipped files")
 
 args = parser.parse_args()
 
-searchWords = ["test"]
 for w in args.search:
     searchWords.append(w)
 
