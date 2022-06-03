@@ -377,8 +377,6 @@ def getTerminalSize():
     return retval
 
 def interactive():
-    from pynput import keyboard
-
     lineOffset = 0
     currentMatchIdx = 0
     
