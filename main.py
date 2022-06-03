@@ -282,11 +282,17 @@ def getDefaultColor(background=False):
 
 ## Go through all the files in a directory and add them to a list
 def walk(walkpath, savedPaths, skippedFiles):
+
     # Check if the target if file
     if os.path.isfile(walkpath):
         filesToParse.append(walkpath)
         return
-    
+    # Check that the target is directory
+    if not os.path.isdir(walkpath):
+        print(colorLine("Can't find: ", RED) + colorLine(walkpath, YELLOW))
+        exit()
+
+
     # Iterate over all of the files
     for subdir, _, files in os.walk(walkpath):
         for f in files:
