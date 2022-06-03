@@ -463,10 +463,10 @@ def interactive():
             v = ord(key)
         except:
             continue
-
         if v == 224:
             continue
-        arrows = {72: "up", 75: "left", 80: "down", 77: "right"}
+        arrows = {72: "up", 75: "left", 80: "down", 77: "right", # Windows
+                  65: "up", 68: "left", 66: "down", 67: "right"} # Linux
         ctrlArrows = {141: "up", 115: "left", 145: "down", 116: "right"}
         if key in ["l", "h", "q"]:
             if not onPress(key, False):
