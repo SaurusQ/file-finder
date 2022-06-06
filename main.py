@@ -457,6 +457,7 @@ def interactive():
             finally:
                 termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
+    linuxCnt = 0
     while True:
         key = getChar()
         try:
@@ -465,17 +466,31 @@ def interactive():
             continue
         if v == 224:
             continue
-        arrows = {72: "up", 75: "left", 80: "down", 77: "right", # Windows
-                  65: "up", 68: "left", 66: "down", 67: "right"} # Linux
-        ctrlArrows = {141: "up", 115: "left", 145: "down", 116: "right"}
+        
         if key in ["l", "h", "q"]:
             if not onPress(key, False):
                 return
+        elif sys.platform == "linux":
+            arrBefore = [27, 91, 49, 59, 53]
+            if v in arrBefore:
+                linuxCnt += 1
+                continue
+            arrows = {65: "up", 68: "left", 66: "down", 67: "right"}
+            print(linuxCnt)
+            if v in arrows and (linuxCnt == 2 or linuxCnt == 5):
+                if not onPress(arrows[v], linuxCnt == 5):
+                    return
+            linuxCnt = 0
         else:
+            arrows = {72: "up", 75: "left", 80: "down", 77: "right"}
+            ctrlArrows = {141: "up", 115: "left", 145: "down", 116: "right"}
             if v in arrows:
-                onPress(arrows[v], False)
+                if not onPress(arrows[v], False):
+                    return
             elif v in ctrlArrows:
-                onPress(ctrlArrows[v], True)
+                if not onPress(ctrlArrows[v], True):
+                    return
+            
 
 #retval = lineColor("123456789012345678901234567890", [(0, 10, (255,0,0), False), (11,20, (0,255,0), False)])#, (8, 20, (0, 255, 0), False), (5, 25, (0,0,255), False)])
 #print(retval)
