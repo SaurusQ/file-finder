@@ -13,8 +13,9 @@ if os.name == 'nt':
     kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
 
 # Configuration
-bannedFileTypes = ["bin", "exe"]
-bannedFileNames = []
+bannedFileTypes     = ["bin", "exe"]
+bannedFileNames     = []
+bannedDirectories   = [".git"]
 
 # Argument parsing
 parser = argparse.ArgumentParser()
@@ -317,7 +318,17 @@ def walk(walkpath, savedPaths, skippedFiles):
 
 
     # Iterate over all of the files
+    skippedDir = False
     for subdir, _, files in os.walk(walkpath):
+        for bannedDir in bannedDirectories:
+            if bannedDir in subdir:
+                skippedFiles.append(subdir)
+                skippedDir = True
+                break
+        if skippedDir:
+            skippedDir = False
+            continue
+
         for f in files:
             path = os.path.join(subdir, f)
             if handleFileType(subdir, path, f, savedPaths):
