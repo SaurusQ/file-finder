@@ -64,7 +64,7 @@ PINK            = (255, 120, 248)
 matches = []
 foundInFiles = 0
 
-def handlePdfFile(filepath, outputpath):
+def handlePdfFile(filepath, outputfile):
     try:
         import pypdf
         import string
@@ -74,10 +74,7 @@ def handlePdfFile(filepath, outputpath):
             for page in reader.pages:
                 text += page.extract_text() + "\n"
         text = ''.join(filter(lambda x: x in string.printable, text))
-        print(os.path.splitext(os.path.basename(filepath))[0])
-        filename = os.path.join(outputpath, os.path.splitext(os.path.basename(filepath))[0])
-        print(filename)
-        with open(filename, "w") as textFile:
+        with open(outputfile, "w") as textFile:
             textFile.write(text)
     except Exception as e:
         print("Failed to extract pdf file", filepath)
@@ -103,7 +100,8 @@ def handleFileType(subdir, filepath, filename, savedPaths):
     if filetype in ["zip", "tar", "pdf"]:
         if args.extract:
             outputPath = os.path.join(subdir, filename[::-1].replace(".","e_",1)[::-1])
-            if not os.path.exists(outputPath):
+            outputFile = os.path.join(subdir, filename.replace("." + filetype, "." + filetype + ".txt"))
+            if not os.path.exists(outputPath) and filetype in ["zip", "tar"]:
                 os.mkdir(outputPath)
                 if filetype == "zip":
                         print("Extracting zip file", filepath)
@@ -115,10 +113,12 @@ def handleFileType(subdir, filepath, filename, savedPaths):
                         tfile = tarfile.open(filepath)
                         tfile.extractall(outputPath)
                         tfile.close()
-                elif filetype == "pdf":
-                        print("Extracting pdf file")
-                        handlePdfFile(filepath, outputPath)
                 walk(outputPath, savedPaths, [])
+            if not os.path.exists(outputFile) and filetype in ["pdf"]:
+                if filetype == "pdf":
+                        print("Extracting pdf file")
+                        handlePdfFile(filepath, outputFile)
+                filesToParse.append(outputFile)
         return False
     return True
 
