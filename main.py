@@ -64,8 +64,27 @@ PINK            = (255, 120, 248)
 matches = []
 foundInFiles = 0
 
+def handlePdfFile(filepath, outputpath):
+    try:
+        import pypdf
+        import string
+        with open(filepath, "rb") as pdfFile:
+            reader = pypdf.PdfReader(pdfFile)
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text() + "\n"
+        text = ''.join(filter(lambda x: x in string.printable, text))
+        print(os.path.splitext(os.path.basename(filepath))[0])
+        filename = os.path.join(outputpath, os.path.splitext(os.path.basename(filepath))[0])
+        print(filename)
+        with open(filename, "w") as textFile:
+            textFile.write(text)
+    except Exception as e:
+        print("Failed to extract pdf file", filepath)
+        print(e)
+        return
+
 def handleFileType(subdir, filepath, filename, savedPaths):
-    
     # Handle banned files
     if filename in bannedFileNames:
         return False
@@ -81,7 +100,7 @@ def handleFileType(subdir, filepath, filename, savedPaths):
         return False
 
     # Handle extraction
-    if filetype in ["zip", "tar"]:
+    if filetype in ["zip", "tar", "pdf"]:
         if args.extract:
             outputPath = os.path.join(subdir, filename[::-1].replace(".","e_",1)[::-1])
             if not os.path.exists(outputPath):
@@ -96,7 +115,10 @@ def handleFileType(subdir, filepath, filename, savedPaths):
                         tfile = tarfile.open(filepath)
                         tfile.extractall(outputPath)
                         tfile.close()
-                walk(outputPath, savedPaths)
+                elif filetype == "pdf":
+                        print("Extracting pdf file")
+                        handlePdfFile(filepath, outputPath)
+                walk(outputPath, savedPaths, [])
         return False
     return True
 
