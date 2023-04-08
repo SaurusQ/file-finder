@@ -22,9 +22,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument("directory", help="Which folder is searched")
 parser.add_argument("-s", "--search", nargs="+", default=[], help="Search")
 parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
-parser.add_argument("-e", "--extract", action="store_true", help="Extract zip, tar packages")
+parser.add_argument("-e", "--extract", action="store_true", help="Extract zip, tar packages and genrate text version of pdf")
 parser.add_argument("-b", "--before", type=int, default=0, help="Show additional lines before a match")
 parser.add_argument("-a", "--after", type=int, default=0, help="Show additional lines after a match")
+parser.add_argument("-c", "--ignore-case", action="store_true", help="Ignore case when searching")
 parser.add_argument("-l", "--line", action="store_true", help="Print line numbers")
 parser.add_argument("-p", "--print", action="store_true", help="View the file contents")
 parser.add_argument("-f", "--files", action="store_true", help="Show only files where matches were found")
@@ -152,7 +153,8 @@ def handleFile(filepath):
             lineMatch = False
             currentMatches = []
             for w in searchWords:
-                for r in re.finditer(w, line):
+                it = re.finditer(w, line, re.IGNORECASE) if args.ignore_case else re.finditer(w, line)
+                for r in it:
                     # Store matches
                     currentMatches.append((r.start(), r.end()))
                     matches.append(((r.start(), r.end()), lineNumber, filepath))
