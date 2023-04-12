@@ -27,10 +27,11 @@ parser.add_argument("-b", "--before", type=int, default=0, help="Show additional
 parser.add_argument("-a", "--after", type=int, default=0, help="Show additional lines after a match")
 parser.add_argument("-c", "--ignore-case", action="store_true", help="Ignore case when searching")
 parser.add_argument("-l", "--line", action="store_true", help="Print line numbers")
+parser.add_argument("-m", "--match-file-names", action="store_true", help="Search only file names")
 parser.add_argument("-p", "--print", action="store_true", help="View the file contents")
 parser.add_argument("-f", "--files", action="store_true", help="Show only files where matches were found")
 parser.add_argument("-i", "--interactive", action="store_true", help="Interactive search")
-parser.add_argument("-g", "--no-highligth", action="store_true", help="Remove all colors from the cli except the search term.")
+parser.add_argument("-g", "--no-highligth", action="store_true", help="Remove all colors from the cli except the search term")
 parser.add_argument("--skipped", action="store_true", help="Show skipped files")
 
 args = parser.parse_args()
@@ -124,6 +125,14 @@ def handleFileType(subdir, filepath, filename, savedPaths):
         return False
     return True
 
+def handleText(txt):
+    matches = []
+    for w in searchWords:
+        it = re.finditer(w, txt, re.IGNORECASE) if args.ignore_case else re.finditer(w, txt)
+        for r in it:
+            matches.append((r.start(), r.end()))
+    return matches
+                       
 def handleFile(filepath):
     global matches, foundInFiles
     file = open(filepath, "r")
@@ -338,6 +347,18 @@ def walk(walkpath, savedPaths, skippedFiles):
             else:
                 skippedFiles.append(path)
 
+def parseFileNames(skippedFiles):
+    # TODO skipped files
+    nothingFound = []
+    for filepath in filesToParse:
+        filename = os.path.basename(filepath)
+        filenameOffset = len(filepath) - len(filename)
+        matches = handleText(filename)
+        if len(matches) > 0:
+            pathMatch = [(sidx + filenameOffset, eidx + filenameOffset, RED, False) for (sidx, eidx) in matches]
+            pathMatch.append((0, len(filepath), YELLOW, False))
+            print(lineColor(filepath, pathMatch))
+
 def parse(skippedFiles):
     # Run search on all valid files
     nothingFound = []
@@ -533,10 +554,13 @@ def interactive():
 skippedFiles = []
 filesToParse = []
 walk(args.directory, filesToParse, skippedFiles)
-parse(skippedFiles)
-printStats()
+if args.match_file_names:
+    parseFileNames(skippedFiles)
+else:
+    parse(skippedFiles)
+    printStats()
 
 sys.stdout.flush()
 
-if args.interactive:
+if args.interactive and not args.match_file_names:
     interactive()
